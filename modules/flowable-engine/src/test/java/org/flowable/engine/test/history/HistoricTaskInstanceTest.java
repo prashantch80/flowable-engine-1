@@ -30,11 +30,10 @@ import java.util.Map;
 import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.common.engine.api.FlowableObjectNotFoundException;
 import org.flowable.engine.impl.test.PluggableFlowableTestCase;
-import org.flowable.engine.impl.util.CommandContextUtil;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.engine.test.Deployment;
-import org.flowable.identitylink.api.history.HistoricIdentityLink;
 import org.flowable.identitylink.api.IdentityLinkType;
+import org.flowable.identitylink.api.history.HistoricIdentityLink;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.TaskInfo;
 import org.flowable.task.api.history.HistoricTaskInstance;
@@ -118,7 +117,7 @@ public class HistoricTaskInstanceTest extends PluggableFlowableTestCase {
 
         historyService.deleteHistoricTaskInstance(taskId);
         managementService.executeCommand(commandContext -> {
-            CommandContextUtil.getHistoricTaskService(commandContext).deleteHistoricTaskLogEntriesForTaskId(taskId);
+            processEngineConfiguration.getTaskServiceConfiguration().getHistoricTaskService().deleteHistoricTaskLogEntriesForTaskId(taskId);
             return null;
         });
 
@@ -333,10 +332,10 @@ public class HistoricTaskInstanceTest extends PluggableFlowableTestCase {
                 tuple("taskKey123", "Task B")
             );
         assertThat(historyService.createHistoricTaskInstanceQuery().taskDefinitionKeys(Arrays.asList("taskKey1", "taskKey123", "invalid")).count())
-            .isEqualTo(2L);
+            .isEqualTo(2);
 
         assertThat(historyService.createHistoricTaskInstanceQuery().taskDefinitionKeys(Arrays.asList("invalid1", "invalid2")).list()).isEmpty();
-        assertThat(historyService.createHistoricTaskInstanceQuery().taskDefinitionKeys(Arrays.asList("invalid1", "invalid2")).count()).isEqualTo(0L);
+        assertThat(historyService.createHistoricTaskInstanceQuery().taskDefinitionKeys(Arrays.asList("invalid1", "invalid2")).count()).isZero();
 
         assertThat(historyService.createHistoricTaskInstanceQuery().or().taskId("invalid").taskDefinitionKeys(Arrays.asList("taskKey1", "taskKey123", "invalid"))
             .endOr().list())
@@ -346,7 +345,7 @@ public class HistoricTaskInstanceTest extends PluggableFlowableTestCase {
                 tuple("taskKey123", "Task B")
             );
         assertThat(historyService.createHistoricTaskInstanceQuery().or().taskId("invalid").taskDefinitionKeys(Arrays.asList("taskKey1", "taskKey123", "invalid"))
-            .endOr().count()).isEqualTo(2L);
+            .endOr().count()).isEqualTo(2);
     }
 
     @Test
@@ -821,13 +820,13 @@ public class HistoricTaskInstanceTest extends PluggableFlowableTestCase {
                 assertThat(link.getGroupId()).isEqualTo("sales");
                 foundCandidateGroup = true;
             } else {
-                if (link.getType().equals("candidate")) {
+                if ("candidate".equals(link.getType())) {
                     assertThat(link.getUserId()).isEqualTo("fozzie");
                     foundCandidateUser = true;
-                } else if (link.getType().equals("assignee")) {
+                } else if ("assignee".equals(link.getType())) {
                     assertThat(link.getUserId()).isEqualTo("kermit");
                     foundAssignee = true;
-                } else if (link.getType().equals("customUseridentityLink")) {
+                } else if ("customUseridentityLink".equals(link.getType())) {
                     assertThat(link.getUserId()).isEqualTo("gonzo");
                     foundCustom = true;
                 }
@@ -855,7 +854,7 @@ public class HistoricTaskInstanceTest extends PluggableFlowableTestCase {
                 .isExactlyInstanceOf(FlowableObjectNotFoundException.class);
 
         managementService.executeCommand(commandContext -> {
-            CommandContextUtil.getHistoricTaskService(commandContext).deleteHistoricTaskLogEntriesForTaskId(task.getId());
+            processEngineConfiguration.getTaskServiceConfiguration().getHistoricTaskService().deleteHistoricTaskLogEntriesForTaskId(task.getId());
             return null;
         });
     }

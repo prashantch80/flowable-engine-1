@@ -702,7 +702,7 @@ public class CallActivityTest extends PluggableFlowableTestCase {
             "org/flowable/engine/test/api/event/CallActivityTest.testCallActivityAsyncComplete.bpmn20.xml",
             "org/flowable/engine/test/api/event/CallActivityTest.testCallActivityAsyncComplete_subprocess.bpmn20.xml"
     })
-    @DisabledIfSystemProperty(named = "database", matches = "cockroachdb")
+    @DisabledIfSystemProperty(named = "disableWhen", matches = "cockroachdb")
     public void testCallActivityAsyncCompleteRealExecutor() {
         runtimeService.startProcessInstanceByKey("testAsyncComplete");
         waitForJobExecutorToProcessAllJobsAndExecutableTimerJobs(20000L, 200L);
@@ -742,7 +742,7 @@ public class CallActivityTest extends PluggableFlowableTestCase {
         Task task = taskService.createTaskQuery().singleResult();
         assertThat(task.getName()).isEqualTo("One");
 
-        // Completing the task should trigger the event subprocess. This interupts the main flow.
+        // Completing the task should trigger the event subprocess. This interrupts the main flow.
         taskService.complete(task.getId());
         Task subOneTask = taskService.createTaskQuery().taskName("sub one").singleResult();
         assertThat(subOneTask).isNotNull();

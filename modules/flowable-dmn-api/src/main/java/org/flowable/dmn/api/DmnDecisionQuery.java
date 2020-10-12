@@ -114,7 +114,7 @@ public interface DmnDecisionQuery extends Query<DmnDecisionQuery, DmnDecision> {
      * <p>
      * Can also be used without any other criteria (ie. query.latest().list()), which will then give all the latest versions of all the deployed decisions.
      *
-     * @throws FlowableIllegalArgumentException if used in combination with {@link #groupId(String)}, {@link #decisionVersion(int)} or {@link #deploymentId(String)}
+     * @throws FlowableIllegalArgumentException if used in combination with {@link #decisionVersion(Integer)} or {@link #deploymentId(String)}
      */
     DmnDecisionQuery latestVersion();
 
@@ -142,6 +142,16 @@ public interface DmnDecisionQuery extends Query<DmnDecisionQuery, DmnDecision> {
      * Only select decisions that do not have a tenant id.
      */
     DmnDecisionQuery decisionWithoutTenantId();
+
+    /**
+     * Only select decisions with the given type.
+     */
+    DmnDecisionQuery decisionType(String decisionType);
+
+    /**
+     * Only select decisions like the given type.
+     */
+    DmnDecisionQuery decisionTypeLike(String decisionType);
 
     // ordering ////////////////////////////////////////////////////////////
 
@@ -180,4 +190,8 @@ public interface DmnDecisionQuery extends Query<DmnDecisionQuery, DmnDecision> {
      */
     DmnDecisionQuery orderByTenantId();
 
+    /**
+     * Order by decision type (needs to be followed by {@link #asc()} or {@link #desc()}).
+     */
+    DmnDecisionQuery orderByDecisionType();
 }

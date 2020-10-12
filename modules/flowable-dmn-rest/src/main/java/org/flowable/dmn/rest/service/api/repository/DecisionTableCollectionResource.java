@@ -42,7 +42,10 @@ import io.swagger.annotations.Authorization;
 
 /**
  * @author Yvo Swillens
+ *
+ * @deprecated use {@link DecisionCollectionResource} instead.
  */
+@Deprecated
 @RestController
 @Api(tags = { "Decision Tables" }, description = "Manage Decision Tables", authorizations = { @Authorization(value = "basicAuth") })
 public class DecisionTableCollectionResource {
@@ -90,7 +93,7 @@ public class DecisionTableCollectionResource {
             @ApiResponse(code = 400, message = "Indicates a parameter was passed in the wrong format or that latest is used with other parameters other than key and keyLike. The status-message contains additional information.")
     })
     @GetMapping(value = "/dmn-repository/decision-tables", produces = "application/json")
-    public DataResponse<DecisionTableResponse> getDecisionTables(@ApiParam(hidden = true) @RequestParam Map<String, String> allRequestParams, HttpServletRequest request) {
+    public DataResponse<DecisionResponse> getDecisionTables(@ApiParam(hidden = true) @RequestParam Map<String, String> allRequestParams, HttpServletRequest request) {
         DmnDecisionQuery definitionQuery = dmnRepositoryService.createDecisionQuery();
 
         // Populate filter-parameters

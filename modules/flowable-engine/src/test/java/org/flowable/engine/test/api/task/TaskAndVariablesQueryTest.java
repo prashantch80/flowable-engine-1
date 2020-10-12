@@ -13,6 +13,7 @@
 package org.flowable.engine.test.api.task;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 
 import java.text.SimpleDateFormat;
@@ -21,11 +22,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.common.engine.impl.history.HistoryLevel;
 import org.flowable.common.engine.impl.interceptor.Command;
 import org.flowable.engine.impl.test.HistoryTestHelper;
 import org.flowable.engine.impl.test.PluggableFlowableTestCase;
-import org.flowable.engine.impl.util.CommandContextUtil;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.engine.test.Deployment;
 import org.flowable.task.api.Task;
@@ -75,14 +76,14 @@ public class TaskAndVariablesQueryTest extends PluggableFlowableTestCase {
     @Deployment
     public void testQuery() {
         org.flowable.task.api.Task task = taskService.createTaskQuery().includeTaskLocalVariables().taskAssignee("gonzo").singleResult();
+        assertThat(task.getProcessVariables()).isEmpty();
         Map<String, Object> variableMap = task.getTaskLocalVariables();
         assertThat(variableMap).hasSize(3);
-        assertThat(task.getProcessVariables()).isEmpty();
-        assertThat(variableMap.get("testVar")).isNotNull();
-        assertThat(variableMap.get("testVar")).isEqualTo("someVariable");
-        assertThat(variableMap.get("testVar2")).isNotNull();
-        assertThat(variableMap.get("testVar2")).isEqualTo(123);
-        assertThat(variableMap.get("testVarBinary")).isNotNull();
+        assertThat(variableMap)
+                .contains(
+                        entry("testVar", "someVariable"),
+                        entry("testVar2", 123)
+                );
         assertThat(new String((byte[]) variableMap.get("testVarBinary"))).isEqualTo("This is a binary variable");
 
         List<org.flowable.task.api.Task> tasks = taskService.createTaskQuery().list();
@@ -103,25 +104,35 @@ public class TaskAndVariablesQueryTest extends PluggableFlowableTestCase {
         assertThat((Boolean) task.getProcessVariables().get("processVar")).isTrue();
         assertThat(new String((byte[]) task.getProcessVariables().get("binaryVariable"))).isEqualTo("This is a binary process variable");
 
-        taskService.setVariable(task.getId(), "anotherProcessVar", 123);
-        taskService.setVariableLocal(task.getId(), "localVar", "test");
+        String taskId = task.getId();
+        taskService.setVariable(taskId, "anotherProcessVar", 123);
+        taskService.setVariableLocal(taskId, "localVar", "test");
+
+        assertThatThrownBy(() -> taskService.setVariableLocal(taskId, null, null))
+                .isInstanceOf(FlowableIllegalArgumentException.class)
+                .hasMessage("variableName is null");
 
         task = taskService.createTaskQuery().includeTaskLocalVariables().taskAssignee("kermit").singleResult();
         assertThat(task.getProcessVariables()).isEmpty();
-        assertThat(task.getTaskLocalVariables()).hasSize(1);
-        assertThat(task.getTaskLocalVariables().get("localVar")).isEqualTo("test");
+        assertThat(task.getTaskLocalVariables())
+                .containsOnly(
+                        entry("localVar", "test")
+                );
 
         task = taskService.createTaskQuery().includeProcessVariables().taskAssignee("kermit").singleResult();
-        assertThat(task.getProcessVariables()).hasSize(3);
         assertThat(task.getTaskLocalVariables()).isEmpty();
-        assertThat(task.getProcessVariables().get("processVar")).isEqualTo(true);
-        assertThat(task.getProcessVariables().get("anotherProcessVar")).isEqualTo(123);
+        assertThat(task.getProcessVariables()).hasSize(3);
+        assertThat(task.getProcessVariables())
+                .contains(
+                        entry("processVar", true),
+                        entry("anotherProcessVar", 123)
+                );
         assertThat(new String((byte[]) task.getProcessVariables().get("binaryVariable"))).isEqualTo("This is a binary process variable");
 
         tasks = taskService.createTaskQuery().includeTaskLocalVariables().taskCandidateUser("kermit").list();
         assertThat(tasks).hasSize(2);
         assertThat(tasks.get(0).getTaskLocalVariables()).hasSize(2);
-        assertThat(tasks.get(0).getTaskLocalVariables().get("test")).isEqualTo("test");
+        assertThat(tasks.get(0).getTaskLocalVariables()).containsEntry("test", "test");
         assertThat(tasks.get(0).getProcessVariables()).isEmpty();
 
         tasks = taskService.createTaskQuery().includeProcessVariables().taskCandidateUser("kermit").list();
@@ -131,21 +142,31 @@ public class TaskAndVariablesQueryTest extends PluggableFlowableTestCase {
 
         task = taskService.createTaskQuery().includeTaskLocalVariables().taskAssignee("kermit").taskVariableValueEquals("localVar", "test").singleResult();
         assertThat(task.getProcessVariables()).isEmpty();
-        assertThat(task.getTaskLocalVariables()).hasSize(1);
-        assertThat(task.getTaskLocalVariables().get("localVar")).isEqualTo("test");
+        assertThat(task.getTaskLocalVariables())
+                .containsOnly(
+                        entry("localVar", "test")
+                );
 
         task = taskService.createTaskQuery().includeProcessVariables().taskAssignee("kermit").taskVariableValueEquals("localVar", "test").singleResult();
         assertThat(task.getProcessVariables()).hasSize(3);
         assertThat(task.getTaskLocalVariables()).isEmpty();
-        assertThat(task.getProcessVariables().get("processVar")).isEqualTo(true);
-        assertThat(task.getProcessVariables().get("anotherProcessVar")).isEqualTo(123);
+        assertThat(task.getProcessVariables())
+                .contains(
+                        entry("processVar", true),
+                        entry("anotherProcessVar", 123)
+                );
 
         task = taskService.createTaskQuery().includeTaskLocalVariables().includeProcessVariables().taskAssignee("kermit").singleResult();
         assertThat(task.getProcessVariables()).hasSize(3);
-        assertThat(task.getTaskLocalVariables()).hasSize(1);
-        assertThat(task.getTaskLocalVariables().get("localVar")).isEqualTo("test");
-        assertThat(task.getProcessVariables().get("processVar")).isEqualTo(true);
-        assertThat(task.getProcessVariables().get("anotherProcessVar")).isEqualTo(123);
+        assertThat(task.getTaskLocalVariables())
+                .containsOnly(
+                        entry("localVar", "test")
+                );
+        assertThat(task.getProcessVariables())
+                .contains(
+                        entry("processVar", true),
+                        entry("anotherProcessVar", 123)
+                );
         assertThat(new String((byte[]) task.getProcessVariables().get("binaryVariable"))).isEqualTo("This is a binary process variable");
     }
     
@@ -304,28 +325,36 @@ public class TaskAndVariablesQueryTest extends PluggableFlowableTestCase {
 
         org.flowable.task.api.Task task = taskService.createTaskQuery().includeProcessVariables().or().processVariableValueEquals("undefined", 999)
                 .processVariableValueEquals("anotherProcessVar", 123).endOr().singleResult();
-        assertThat(task.getProcessVariables()).hasSize(1);
-        assertThat(task.getProcessVariables().get("anotherProcessVar")).isEqualTo(123);
+        assertThat(task.getProcessVariables())
+                .containsOnly(
+                        entry("anotherProcessVar", 123)
+                );
 
         task = taskService.createTaskQuery().includeProcessVariables().or().processVariableValueEquals("undefined", 999).endOr().singleResult();
         assertThat(task).isNull();
 
         task = taskService.createTaskQuery().includeProcessVariables().or().processVariableValueEquals("anotherProcessVar", 123)
                 .processVariableValueEquals("undefined", 999).endOr().singleResult();
-        assertThat(task.getProcessVariables()).hasSize(1);
-        assertThat(task.getProcessVariables().get("anotherProcessVar")).isEqualTo(123);
+        assertThat(task.getProcessVariables())
+                .containsOnly(
+                        entry("anotherProcessVar", 123)
+                );
 
         task = taskService.createTaskQuery().includeProcessVariables().or().processVariableValueEquals("anotherProcessVar", 123).endOr().singleResult();
-        assertThat(task.getProcessVariables()).hasSize(1);
-        assertThat(task.getProcessVariables().get("anotherProcessVar")).isEqualTo(123);
+        assertThat(task.getProcessVariables())
+                .containsOnly(
+                        entry("anotherProcessVar", 123)
+                );
 
         task = taskService.createTaskQuery().includeProcessVariables().or().processVariableValueEquals("anotherProcessVar", 999).endOr().singleResult();
         assertThat(task).isNull();
 
         task = taskService.createTaskQuery().includeProcessVariables().or().processVariableValueEquals("anotherProcessVar", 999)
                 .processVariableValueEquals("anotherProcessVar", 123).endOr().singleResult();
-        assertThat(task.getProcessVariables()).hasSize(1);
-        assertThat(task.getProcessVariables().get("anotherProcessVar")).isEqualTo(123);
+        assertThat(task.getProcessVariables())
+                .containsOnly(
+                        entry("anotherProcessVar", 123)
+                );
     }
 
     @Test
@@ -350,7 +379,7 @@ public class TaskAndVariablesQueryTest extends PluggableFlowableTestCase {
         query1 = query1.endOr();
         org.flowable.task.api.Task task = query1.singleResult();
         assertThat(task.getProcessVariables()).hasSize(2);
-        assertThat(task.getProcessVariables().get("anotherProcessVar")).isEqualTo(123);
+        assertThat(task.getProcessVariables()).containsEntry("anotherProcessVar", 123);
     }
 
     @Test
@@ -397,7 +426,7 @@ public class TaskAndVariablesQueryTest extends PluggableFlowableTestCase {
 
     public Task createTaskWithDefinitionId(String taskId) {
         return this.processEngineConfiguration.getCommandExecutor().execute((Command<Task>) commandContext -> {
-                TaskEntity task = CommandContextUtil.getTaskService().createTask();
+                TaskEntity task = processEngineConfiguration.getTaskServiceConfiguration().getTaskService().createTask();
                 task.setId(taskId);
                 task.setRevision(0);
                 task.setTaskDefinitionId("testTaskDefinitionId");

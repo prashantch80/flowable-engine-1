@@ -17,9 +17,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.flowable.common.engine.api.FlowableIllegalArgumentException;
-import org.flowable.common.engine.impl.query.AbstractQuery;
 import org.flowable.common.engine.impl.interceptor.CommandContext;
 import org.flowable.common.engine.impl.interceptor.CommandExecutor;
+import org.flowable.common.engine.impl.query.AbstractQuery;
 import org.flowable.dmn.api.DmnDecision;
 import org.flowable.dmn.api.DmnDecisionQuery;
 import org.flowable.dmn.engine.impl.util.CommandContextUtil;
@@ -55,6 +55,8 @@ public class DecisionQueryImpl extends AbstractQuery<DmnDecisionQuery, DmnDecisi
     protected String tenantId;
     protected String tenantIdLike;
     protected boolean withoutTenantId;
+    protected String decisionType;
+    protected String decisionTypeLike;
 
     public DecisionQueryImpl() {
     }
@@ -251,6 +253,18 @@ public class DecisionQueryImpl extends AbstractQuery<DmnDecisionQuery, DmnDecisi
         return this;
     }
 
+    @Override
+    public DmnDecisionQuery decisionType(String decisionType) {
+        this.decisionType = decisionType;
+        return this;
+    }
+
+    @Override
+    public DmnDecisionQuery decisionTypeLike(String decisionTypeLike) {
+        this.decisionTypeLike = decisionTypeLike;
+        return this;
+    }
+
     // sorting ////////////////////////////////////////////
 
     @Override
@@ -286,6 +300,11 @@ public class DecisionQueryImpl extends AbstractQuery<DmnDecisionQuery, DmnDecisi
     @Override
     public DmnDecisionQuery orderByTenantId() {
         return orderBy(DecisionQueryProperty.DECISION_TENANT_ID);
+    }
+
+    @Override
+    public DmnDecisionQuery orderByDecisionType() {
+        return orderBy(DecisionQueryProperty.DECISION_TYPE);
     }
 
     // results ////////////////////////////////////////////
@@ -388,5 +407,13 @@ public class DecisionQueryImpl extends AbstractQuery<DmnDecisionQuery, DmnDecisi
 
     public boolean isWithoutTenantId() {
         return withoutTenantId;
+    }
+
+    public String getDecisionType() {
+        return decisionType;
+    }
+
+    public String getDecisionTypeLike() {
+        return decisionTypeLike;
     }
 }

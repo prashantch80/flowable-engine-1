@@ -13,6 +13,7 @@
 package org.flowable.cmmn.test.runtime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.flowable.cmmn.api.delegate.DelegatePlanItemInstance;
@@ -27,10 +28,16 @@ import org.flowable.cmmn.engine.impl.persistence.entity.PlanItemInstanceEntity;
 import org.flowable.cmmn.engine.impl.util.CommandContextUtil;
 import org.flowable.cmmn.engine.test.CmmnDeployment;
 import org.flowable.cmmn.engine.test.FlowableCmmnTestCase;
+import org.flowable.cmmn.engine.test.impl.CmmnHistoryTestHelper;
 import org.flowable.cmmn.model.CmmnElement;
 import org.flowable.cmmn.model.CmmnModel;
 import org.flowable.cmmn.model.PlanItem;
+import org.flowable.cmmn.test.delegate.TestJavaDelegateThrowsException;
+import org.flowable.common.engine.api.FlowableException;
+import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.common.engine.api.delegate.Expression;
+import org.flowable.common.engine.impl.history.HistoryLevel;
+import org.flowable.common.engine.impl.javax.el.ELException;
 import org.junit.Test;
 
 /**
@@ -61,10 +68,12 @@ public class ServiceTaskTest extends FlowableCmmnTestCase {
         cmmnRuntimeService.triggerPlanItemInstance(planItemInstance.getId());
         assertThat(cmmnRuntimeService.createCaseInstanceQuery().count()).isZero();
 
-        assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
+        if (CmmnHistoryTestHelper.isHistoryLevelAtLeast(HistoryLevel.ACTIVITY, cmmnEngineConfiguration)) {
+            assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
                 .caseInstanceId(caseInstance.getId())
                 .variableName("javaDelegate")
                 .singleResult().getValue()).isEqualTo("executed");
+        }
     }
 
     @Test
@@ -89,14 +98,43 @@ public class ServiceTaskTest extends FlowableCmmnTestCase {
         cmmnRuntimeService.triggerPlanItemInstance(planItemInstance.getId());
         assertThat(cmmnRuntimeService.createCaseInstanceQuery().count()).isZero();
 
-        assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
+        if (CmmnHistoryTestHelper.isHistoryLevelAtLeast(HistoryLevel.ACTIVITY, cmmnEngineConfiguration)) {
+            assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
                 .caseInstanceId(caseInstance.getId())
                 .variableName("testValue")
                 .singleResult().getValue()).isEqualTo("test");
-        assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
+            assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
                 .caseInstanceId(caseInstance.getId())
                 .variableName("testExpression")
                 .singleResult().getValue()).isEqualTo(true);
+        }
+    }
+
+    @Test
+    @CmmnDeployment(resources = "org/flowable/cmmn/test/runtime/ServiceTaskTest.testJavaServiceTaskThrowsException.cmmn")
+    public void testJavaServiceTaskThrowsFlowableException() {
+        TestJavaDelegateThrowsException.setExceptionSupplier(() -> new FlowableIllegalArgumentException("test exception"));
+        assertThatThrownBy(() -> cmmnRuntimeService.createCaseInstanceBuilder()
+                .caseDefinitionKey("myCase")
+                .start())
+                .isInstanceOf(FlowableIllegalArgumentException.class)
+                .hasNoCause()
+                .hasMessage("test exception");
+
+        TestJavaDelegateThrowsException.resetExceptionSupplier();
+    }
+
+    @Test
+    @CmmnDeployment(resources = "org/flowable/cmmn/test/runtime/ServiceTaskTest.testJavaServiceTaskThrowsException.cmmn")
+    public void testJavaServiceTaskThrowsNonFlowableException() {
+        TestJavaDelegateThrowsException.setExceptionSupplier(() -> new IllegalArgumentException("test exception"));
+        assertThatThrownBy(() -> cmmnRuntimeService.createCaseInstanceBuilder()
+                .caseDefinitionKey("myCase")
+                .start())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasNoCause()
+                .hasMessage("test exception");
+        TestJavaDelegateThrowsException.resetExceptionSupplier();
     }
 
     @Test
@@ -120,10 +158,12 @@ public class ServiceTaskTest extends FlowableCmmnTestCase {
         cmmnRuntimeService.triggerPlanItemInstance(planItemInstance.getId());
         assertThat(cmmnRuntimeService.createCaseInstanceQuery().count()).isZero();
 
-        assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
+        if (CmmnHistoryTestHelper.isHistoryLevelAtLeast(HistoryLevel.ACTIVITY, cmmnEngineConfiguration)) {
+            assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
                 .caseInstanceId(caseInstance.getId())
                 .variableName("beanResponse")
                 .singleResult().getValue()).isEqualTo("hello test");
+        }
     }
 
     @Test
@@ -148,10 +188,12 @@ public class ServiceTaskTest extends FlowableCmmnTestCase {
         cmmnRuntimeService.triggerPlanItemInstance(planItemInstance.getId());
         assertThat(cmmnRuntimeService.createCaseInstanceQuery().count()).isZero();
 
-        assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
+        if (CmmnHistoryTestHelper.isHistoryLevelAtLeast(HistoryLevel.ACTIVITY, cmmnEngineConfiguration)) {
+            assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
                 .caseInstanceId(caseInstance.getId())
                 .variableName("javaDelegate")
                 .singleResult().getValue()).isEqualTo("executed");
+        }
     }
 
     @Test
@@ -176,15 +218,131 @@ public class ServiceTaskTest extends FlowableCmmnTestCase {
         cmmnRuntimeService.triggerPlanItemInstance(planItemInstance.getId());
         assertThat(cmmnRuntimeService.createCaseInstanceQuery().count()).isZero();
 
-        assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
+        if (CmmnHistoryTestHelper.isHistoryLevelAtLeast(HistoryLevel.ACTIVITY, cmmnEngineConfiguration)) {
+            assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
                 .caseInstanceId(caseInstance.getId())
                 .variableName("testValue")
                 .singleResult().getValue()).isEqualTo("test");
-        assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
+            assertThat(cmmnHistoryService.createHistoricVariableInstanceQuery()
                 .caseInstanceId(caseInstance.getId())
                 .variableName("testExpression")
                 .singleResult().getValue()).isEqualTo(true);
+        }
     }
+
+    @Test
+    @CmmnDeployment(resources = "org/flowable/cmmn/test/runtime/ServiceTaskTest.testDelegateExpressionThrowsException.cmmn")
+    public void testDelegateExpressionThrowsFlowableException() {
+        assertThatThrownBy(() -> cmmnRuntimeService.createCaseInstanceBuilder()
+                .caseDefinitionKey("myCase")
+                .transientVariable("testDelegateBeanThrowsException", new PlanItemJavaDelegate() {
+
+                    @Override
+                    public void execute(DelegatePlanItemInstance planItemInstance) {
+                        throw new FlowableIllegalArgumentException("test exception");
+                    }
+                })
+                .start())
+                .isInstanceOf(FlowableIllegalArgumentException.class)
+                .hasNoCause()
+                .hasMessage("test exception");
+    }
+
+    @Test
+    @CmmnDeployment(resources = "org/flowable/cmmn/test/runtime/ServiceTaskTest.testDelegateExpressionThrowsException.cmmn")
+    public void testDelegateExpressionThrowsNonFlowableException() {
+        assertThatThrownBy(() -> cmmnRuntimeService.createCaseInstanceBuilder()
+                .caseDefinitionKey("myCase")
+                .transientVariable("testDelegateBeanThrowsException", new PlanItemJavaDelegate() {
+
+                    @Override
+                    public void execute(DelegatePlanItemInstance planItemInstance) {
+                        throw new IllegalArgumentException("test exception");
+                    }
+                })
+                .start())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasNoCause()
+                .hasMessage("test exception");
+    }
+
+    @Test
+    @CmmnDeployment(resources = "org/flowable/cmmn/test/runtime/ServiceTaskTest.testDelegateExpressionCmmnTriggerableActivityBehaviorThrowsException.cmmn")
+    public void testDelegateExpressionCmmnTriggerableActivityBehaviorThrowsFlowableExceptionOnTrigger() {
+        CmmnTriggerableActivityBehavior triggerableActivityBehavior = new CmmnTriggerableActivityBehavior() {
+
+            @Override
+            public void trigger(DelegatePlanItemInstance planItemInstance) {
+                throw new FlowableIllegalArgumentException("test exception");
+            }
+
+            @Override
+            public void execute(DelegatePlanItemInstance delegatePlanItemInstance) {
+                // Do nothing, wait state
+            }
+        };
+
+        CaseInstance caseInstance = cmmnRuntimeService.createCaseInstanceBuilder()
+                .caseDefinitionKey("myCase")
+                .transientVariable("testDelegateBeanThrowsException", triggerableActivityBehavior)
+                .start();
+
+        // The service task here acts like a wait state.
+        // When the case instance is started, it will wait and be in state ACTIVE.
+
+        PlanItemInstance planItemInstance = cmmnRuntimeService.createPlanItemInstanceQuery().caseInstanceId(caseInstance.getId()).singleResult();
+        assertThat(planItemInstance.getState()).isEqualTo(PlanItemInstanceState.ACTIVE);
+
+        // When triggered, the plan item will complete
+        assertThatThrownBy(() -> {
+            cmmnRuntimeService.createPlanItemInstanceTransitionBuilder(planItemInstance.getId())
+                    .transientVariable("testDelegateBeanThrowsException", triggerableActivityBehavior)
+                    .trigger();
+        })
+                .isInstanceOf(FlowableIllegalArgumentException.class)
+                .hasNoCause()
+                .hasMessage("test exception");
+    }
+
+    @Test
+    @CmmnDeployment(resources = "org/flowable/cmmn/test/runtime/ServiceTaskTest.testDelegateExpressionCmmnTriggerableActivityBehaviorThrowsException.cmmn")
+    public void testDelegateExpressionCmmnTriggerableActivityBehaviorThrowsNonFlowableExceptionOnTrigger() {
+        CmmnTriggerableActivityBehavior triggerableActivityBehavior = new CmmnTriggerableActivityBehavior() {
+
+            @Override
+            public void trigger(DelegatePlanItemInstance planItemInstance) {
+                throw new IllegalArgumentException("test exception");
+            }
+
+            @Override
+            public void execute(DelegatePlanItemInstance delegatePlanItemInstance) {
+                // Do nothing, wait state
+            }
+        };
+
+        CaseInstance caseInstance = cmmnRuntimeService.createCaseInstanceBuilder()
+                .caseDefinitionKey("myCase")
+                .transientVariable("testDelegateBeanThrowsException", triggerableActivityBehavior)
+                .start();
+
+        // The service task here acts like a wait state.
+        // When the case instance is started, it will wait and be in state ACTIVE.
+
+        PlanItemInstance planItemInstance = cmmnRuntimeService.createPlanItemInstanceQuery().caseInstanceId(caseInstance.getId()).singleResult();
+        assertThat(planItemInstance.getState()).isEqualTo(PlanItemInstanceState.ACTIVE);
+
+        // When triggered, the plan item will complete
+        assertThatThrownBy(() -> {
+            cmmnRuntimeService.createPlanItemInstanceTransitionBuilder(planItemInstance.getId())
+                    .transientVariable("testDelegateBeanThrowsException", triggerableActivityBehavior)
+                    .trigger();
+        })
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasNoCause()
+                .hasMessage("test exception");
+    }
+
+
 
     @Test
     @CmmnDeployment
@@ -253,9 +411,56 @@ public class ServiceTaskTest extends FlowableCmmnTestCase {
         cmmnRuntimeService.createPlanItemInstanceTransitionBuilder(planItemInstance.getId()).trigger();
 
         assertCaseInstanceEnded(caseInstance);
-        assertThat(cmmnHistoryService.createHistoricPlanItemInstanceQuery().planItemInstanceCaseInstanceId(caseInstance.getId()).singleResult().getState())
-            .isEqualTo(PlanItemInstanceState.COMPLETED);
 
+        if (CmmnHistoryTestHelper.isHistoryLevelAtLeast(HistoryLevel.ACTIVITY, cmmnEngineConfiguration)) {
+            assertThat(cmmnHistoryService.createHistoricPlanItemInstanceQuery().planItemInstanceCaseInstanceId(caseInstance.getId()).singleResult().getState())
+                .isEqualTo(PlanItemInstanceState.COMPLETED);
+        }
+
+    }
+
+    @Test
+    @CmmnDeployment(resources = "org/flowable/cmmn/test/runtime/ServiceTaskTest.testExpressionThrowsException.cmmn")
+    public void testExpressionThrowsFlowableException() {
+        assertThatThrownBy(() -> cmmnRuntimeService.createCaseInstanceBuilder()
+                .caseDefinitionKey("myCase")
+                .transientVariable("testBean", new Object() {
+
+                    public void invoke() {
+                        throw new FlowableIllegalArgumentException("test exception");
+                    }
+                })
+                .start())
+                .isExactlyInstanceOf(FlowableException.class)
+                .hasMessage("Error while evaluating expression: ${testBean.invoke()}")
+                .getCause()
+                .isInstanceOf(ELException.class)
+                .getCause()
+                .isInstanceOf(FlowableIllegalArgumentException.class)
+                .hasNoCause()
+                .hasMessage("test exception");
+    }
+
+    @Test
+    @CmmnDeployment(resources = "org/flowable/cmmn/test/runtime/ServiceTaskTest.testExpressionThrowsException.cmmn")
+    public void testExpressionThrowsNonFlowableException() {
+        assertThatThrownBy(() -> cmmnRuntimeService.createCaseInstanceBuilder()
+                .caseDefinitionKey("myCase")
+                .transientVariable("testBean", new Object() {
+
+                    public void invoke() {
+                        throw new IllegalArgumentException("test exception");
+                    }
+                })
+                .start())
+                .isExactlyInstanceOf(FlowableException.class)
+                .hasMessage("Error while evaluating expression: ${testBean.invoke()}")
+                .getCause()
+                .isInstanceOf(ELException.class)
+                .getCause()
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasNoCause()
+                .hasMessage("test exception");
     }
 
     public static class TestJavaDelegate01 implements PlanItemJavaDelegate {
